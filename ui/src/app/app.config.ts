@@ -1,13 +1,12 @@
-import { DOCUMENT, registerLocaleData } from '@angular/common';
-import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { registerLocaleData } from '@angular/common';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import zh from '@angular/common/locales/zh';
-import { ApplicationConfig, importProvidersFrom, provideExperimentalZonelessChangeDetection, inject, provideAppInitializer, EnvironmentProviders } from '@angular/core';
+import { ApplicationConfig, importProvidersFrom, provideZonelessChangeDetection, inject, provideAppInitializer, EnvironmentProviders, DOCUMENT } from '@angular/core';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { provideRouter, RouteReuseStrategy, TitleStrategy, withComponentInputBinding, withHashLocation, withInMemoryScrolling, withPreloading } from '@angular/router';
+import { provideRouter, RouteReuseStrategy, TitleStrategy, withComponentInputBinding, withHashLocation, withInMemoryScrolling, withPreloading, withViewTransitions } from '@angular/router';
 
 import { DashboardOutline, FormOutline, MenuFoldOutline, MenuUnfoldOutline } from '@ant-design/icons-angular/icons';
 import { appRoutes } from '@app/app-routing';
-import interceptors from '@app/core/services/interceptors';
 import { CustomPageTitleResolverService } from '@core/services/common/custom-page-title-resolver.service';
 import { InitThemeService } from '@core/services/common/init-theme.service';
 import { LoadAliIconCdnService } from '@core/services/common/load-ali-icon-cdn.service';
@@ -17,7 +16,9 @@ import { SelectivePreloadingStrategyService } from '@core/services/common/select
 import { SubLockedStatusService } from '@core/services/common/sub-locked-status.service';
 import { SubWindowWithService } from '@core/services/common/sub-window-with.service';
 import { ThemeSkinService } from '@core/services/common/theme-skin.service';
+import { httpInterceptorService } from '@core/services/interceptors/http-interceptor';
 import { StartupService } from '@core/startup/startup.service';
+import { getDeepReuseStrategyKeyFn } from '@utils/tools';
 import { NzDrawerModule } from 'ng-zorro-antd/drawer';
 import { NZ_I18N, zh_CN } from 'ng-zorro-antd/i18n';
 import { NZ_ICONS } from 'ng-zorro-antd/icon';
@@ -96,9 +97,16 @@ export const appConfig: ApplicationConfig = {
     provideRouter(
       appRoutes, // 路由
       withPreloading(SelectivePreloadingStrategyService), // 自定义模块预加载
-      // withViewTransitions({
-      //   skipInitialTransition: true
-      // }), // 路由切换过渡，ng17新增实验性特性参考资料https://netbasal.com/angular-v17s-view-transitions-navigate-in-elegance-f2d48fd8ceda
+      withViewTransitions({
+        skipInitialTransition: true,
+        onViewTransitionCreated: ({ transition, from }) => {
+          const fromSource = getDeepReuseStrategyKeyFn(from, false);
+          if (fromSource === 'refresh-empty') {
+            // 刷新tab或者切换“是否展示tab”时禁用过渡动画，否则页面tab栏会闪烁
+            transition.skipTransition();
+          }
+        }
+      }), // 路由切换过渡，ng17新增实验性特性参考资料https://netbasal.com/angular-v17s-view-transitions-navigate-in-elegance-f2d48fd8ceda
       withInMemoryScrolling({
         scrollPositionRestoration: 'top'
       }),
@@ -106,10 +114,9 @@ export const appConfig: ApplicationConfig = {
       withComponentInputBinding() // 开启路由参数绑定到组件的输入属性,ng16新增特性
     ),
     importProvidersFrom(NzDrawerModule, NzModalModule),
-    ...interceptors, // http拦截器
     ...APPINIT_PROVIDES, // 项目启动之前，需要调用的一系列方法
     provideAnimationsAsync(), // 开启延迟加载动画，ng17新增特性，如果想要项目启动时就加载动画，可以使用provideAnimations()
-    provideHttpClient(withInterceptorsFromDi()),
-    provideExperimentalZonelessChangeDetection() // 开启 zoneless
+    provideHttpClient(withInterceptors([httpInterceptorService])),
+    provideZonelessChangeDetection() // 开启 zoneless
   ]
 };

@@ -1,3 +1,7 @@
+@let isNightTheme = this.isNightTheme();
+@let isOverMode = this.isOverMode();
+@let isCollapsed = this.isCollapsed();
+@let mixinModeLeftNav = this.mixinModeLeftNav();
 <app-top-progress-bar></app-top-progress-bar>
 <nz-layout class="min-screen-full-height">
   <!--非混合模式侧边栏固定时占位-->
@@ -104,14 +108,10 @@
 
     <nz-layout>
       <nz-content [ngStyle]="{ marginTop: contentMarginTop }">
-        <div>
-          @if (isShowTab) {
-            <app-tab></app-tab>
-          }
-          <div [@fadeRouteAnimation]="prepareRoute(outlet)">
-            <router-outlet #outlet="outlet"></router-outlet>
-          </div>
-        </div>
+        @if (isShowTab) {
+          <app-tab></app-tab>
+        }
+        <router-outlet></router-outlet>
       </nz-content>
       @if (isHasFooterArea) {
         <nz-footer class="text-center">Ant Design ©2022 Implement By 华舰</nz-footer>

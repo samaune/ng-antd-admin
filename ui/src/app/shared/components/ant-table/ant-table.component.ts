@@ -1,13 +1,14 @@
 import { NgClass, NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, EventEmitter, inject, Input, OnChanges, Output, SimpleChanges, TemplateRef } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, computed, inject, input, InputSignal, OnChanges, output, SimpleChanges, TemplateRef } from '@angular/core';
 
 import { ContextPipePipe } from '@shared/components/ant-table/context-pipe.pipe';
 import { NzSafeAny } from 'ng-zorro-antd/core/types';
-import { NzResizeEvent, NzResizableModule } from 'ng-zorro-antd/resizable';
-import { NzTableQueryParams, NzTableSize, NzTableModule } from 'ng-zorro-antd/table';
+import { NzResizableModule, NzResizeEvent } from 'ng-zorro-antd/resizable';
+import { NzTableModule, NzTableQueryParams, NzTableSize } from 'ng-zorro-antd/table';
 
 import { MapPipe } from '../../pipes/map.pipe';
 import { TableFiledPipe } from '../../pipes/table-filed.pipe';
+
 export interface TableHeader {
   title: string; // 表头名称
   field?: string; // 字段
@@ -42,7 +43,7 @@ export interface AntTableConfig {
 
 export abstract class AntTableComponentToken {
   tableSize!: NzTableSize;
-  tableConfig!: AntTableConfig;
+  tableConfig!: InputSignal<AntTableConfig>;
 
   abstract tableChangeDectction(): void;
 }
@@ -61,25 +62,18 @@ export interface SortFile {
   imports: [NzTableModule, NzResizableModule, NgClass, NgTemplateOutlet, MapPipe, TableFiledPipe, ContextPipePipe]
 })
 export class AntTableComponent implements OnChanges {
-  _dataList!: NzSafeAny[];
-  _tableConfig!: AntTableConfig;
-  _scrollConfig: { x: string; y: string } | {} = {};
   // 从业务组件中传入的缓存的已经选中的checkbox数据数组
-  @Input() checkedCashArrayFromComment: NzSafeAny[] = [];
+  readonly checkedCashArrayFromComment = input<NzSafeAny[]>([]);
 
-  @Input()
-  set tableData(value: NzSafeAny[]) {
-    this._dataList = value;
-    if (this.tableConfig.showCheckbox) {
-      this._dataList.forEach(item => {
-        item['_checked'] = false;
+  tableData = input<NzSafeAny[]>([]);
+  _dataList = computed(() => {
+    if (this.tableConfig().showCheckbox) {
+      return this.tableData().map(item => {
+        return { ...item, _checked: false };
       });
     }
-  }
-
-  get tableData(): NzSafeAny[] {
-    return this._dataList;
-  }
+    return this.tableData();
+  });
 
   _tableSize: NzTableSize = 'default';
   set tableSize(value: NzTableSize) {
@@ -91,44 +85,36 @@ export class AntTableComponent implements OnChanges {
     return this._tableSize;
   }
 
-  @Input()
-  set tableConfig(value: AntTableConfig) {
-    this._tableConfig = value;
-    this.setScrollConfig(value);
-  }
+  tableConfig = input.required<AntTableConfig>();
 
-  get tableConfig(): AntTableConfig {
-    return this._tableConfig;
-  }
+  _scrollConfig = computed(() => {
+    return this.setScrollConfig(this.tableConfig());
+  });
 
-  @Output() readonly changePageIndex = new EventEmitter<NzTableQueryParams>();
-  @Output() readonly changePageSize = new EventEmitter<number>();
-  @Output() readonly selectedChange: EventEmitter<NzSafeAny[]> = new EventEmitter<NzSafeAny[]>();
-  @Output() readonly sortFn: EventEmitter<SortFile> = new EventEmitter<SortFile>();
+  readonly changePageIndex = output<NzTableQueryParams>();
+  readonly changePageSize = output<number>();
+  readonly selectedChange = output<NzSafeAny[]>();
+  readonly sortFn = output<SortFile>();
   indeterminate = false;
   allChecked = false;
   private cdr = inject(ChangeDetectorRef);
 
-  setScrollConfig(value: AntTableConfig): void {
-    if (value && !value.needNoScroll) {
-      // 默认x：100
-      this._scrollConfig = { x: '100px' };
-      let tempX = {};
-      if (value.xScroll !== undefined) {
-        tempX = { x: `${value.xScroll}px` };
-      }
-      let tempY = {};
-      if (value.yScroll !== undefined) {
-        tempY = { y: `${value.yScroll}px` };
-      }
-      this._scrollConfig = { ...this._scrollConfig, ...tempX, ...tempY };
-    } else {
-      this._scrollConfig = {};
+  setScrollConfig(value: AntTableConfig): { x: string; y: string } | {} {
+    if (!value || value.needNoScroll) {
+      return {};
     }
+    const scrollConfig: { x?: string; y?: string } = { x: '100px' };
+    if (value.xScroll !== undefined) {
+      scrollConfig.x = `${value.xScroll}px`;
+    }
+    if (value.yScroll !== undefined) {
+      scrollConfig.y = `${value.yScroll}px`;
+    }
+    return scrollConfig;
   }
 
   changeSort(tableHeader: TableHeader): void {
-    this.tableConfig.headers.forEach(item => {
+    this.tableConfig().headers.forEach(item => {
       if (item.field !== tableHeader.field) {
         item.sortDir = undefined;
       }
@@ -141,7 +127,7 @@ export class AntTableComponent implements OnChanges {
 
   tableChangeDectction(): void {
     // 改变引用触发变更检测。
-    this._dataList = [...this._dataList];
+    // this._dataList() = [...this._dataList()];
     this.cdr.markForCheck();
   }
 
@@ -168,7 +154,7 @@ export class AntTableComponent implements OnChanges {
   }
 
   onResize({ width }: NzResizeEvent, col: string): void {
-    this.tableConfig.headers = this.tableConfig.headers.map(e =>
+    this.tableConfig().headers = this.tableConfig().headers.map(e =>
       e.title === col
         ? {
             ...e,
@@ -180,48 +166,48 @@ export class AntTableComponent implements OnChanges {
 
   checkFn(dataItem: NzSafeAny, isChecked: boolean): void {
     dataItem['_checked'] = isChecked;
-    const index = this.checkedCashArrayFromComment.findIndex(cashItem => cashItem.id === dataItem.id);
+    const index = this.checkedCashArrayFromComment().findIndex(cashItem => cashItem.id === dataItem.id);
     if (isChecked) {
       if (index === -1) {
-        this.checkedCashArrayFromComment.push(dataItem);
+        this.checkedCashArrayFromComment().push(dataItem);
       }
     } else {
       if (index !== -1) {
-        this.checkedCashArrayFromComment.splice(index, 1);
+        this.checkedCashArrayFromComment().splice(index, 1);
       }
     }
   }
 
   // 单选
   public checkRowSingle(isChecked: boolean, selectIndex: number): void {
-    this.checkFn(this._dataList[selectIndex], isChecked);
-    this.selectedChange.emit(this.checkedCashArrayFromComment);
+    this.checkFn(this._dataList()[selectIndex], isChecked);
+    this.selectedChange.emit(this.checkedCashArrayFromComment());
     this.refreshStatus();
   }
 
   // 全选
   onAllChecked(isChecked: boolean): void {
-    this._dataList.forEach(item => {
+    this._dataList().forEach(item => {
       this.checkFn(item, isChecked);
     });
-    this.selectedChange.emit(this.checkedCashArrayFromComment);
+    this.selectedChange.emit(this.checkedCashArrayFromComment());
     this.refreshStatus();
   }
 
   // 刷新复选框状态
   refreshStatus(): void {
-    this._dataList.forEach(item => {
-      const index = this.checkedCashArrayFromComment.findIndex(cashItem => {
+    this._dataList().forEach(item => {
+      const index = this.checkedCashArrayFromComment().findIndex(cashItem => {
         return item.id === cashItem.id;
       });
       item['_checked'] = index !== -1;
     });
     const allChecked =
-      this._dataList.length > 0 &&
-      this._dataList.every(item => {
+      this._dataList().length > 0 &&
+      this._dataList().every(item => {
         return item['_checked'] === true;
       });
-    const allUnChecked = this._dataList.every(item => item['_checked'] !== true);
+    const allUnChecked = this._dataList().every(item => item['_checked'] !== true);
     this.allChecked = allChecked;
     this.indeterminate = !allChecked && !allUnChecked;
   }

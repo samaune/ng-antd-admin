@@ -15,7 +15,7 @@ import { NzFormModule } from 'ng-zorro-antd/form';
 import { NzGridModule } from 'ng-zorro-antd/grid';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
-import { NzNotificationModule, NzNotificationService } from 'ng-zorro-antd/notification';
+import { NzNotificationService } from 'ng-zorro-antd/notification';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
 
 @Component({
@@ -23,7 +23,7 @@ import { NzTabsModule } from 'ng-zorro-antd/tabs';
   templateUrl: './login-form.component.html',
   styleUrls: ['./login-form.component.less'],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, NzFormModule, ReactiveFormsModule, NzTabsModule, NzGridModule, NzButtonModule, NzInputModule, NzWaveModule, NzCheckboxModule, NzIconModule, RouterLink, NzNotificationModule]
+  imports: [FormsModule, NzFormModule, ReactiveFormsModule, NzTabsModule, NzGridModule, NzButtonModule, NzInputModule, NzWaveModule, NzCheckboxModule, NzIconModule, RouterLink]
 })
 export class LoginFormComponent implements OnInit {
   validateForm!: FormGroup;
@@ -42,7 +42,7 @@ export class LoginFormComponent implements OnInit {
       return;
     }
     // 设置全局loading
-    this.spinService.setCurrentGlobalSpinStore(true);
+    this.spinService.$globalSpinStore.set(true);
     // 获取表单的值
     const param = this.validateForm.getRawValue();
     // 调用登录接口
@@ -57,7 +57,7 @@ export class LoginFormComponent implements OnInit {
       .pipe(
         // 无论如何设置全局loading为false
         finalize(() => {
-          this.spinService.setCurrentGlobalSpinStore(false);
+          this.spinService.$globalSpinStore.set(false);
         }),
         takeUntilDestroyed(this.destroyRef)
       )
@@ -69,7 +69,7 @@ export class LoginFormComponent implements OnInit {
             this.router.navigateByUrl('default/dashboard/analysis');
           })
           .finally(() => {
-            this.spinService.setCurrentGlobalSpinStore(false);
+            this.spinService.$globalSpinStore.set(false);
             this.notification.blank(
               '温馨提示',
               `

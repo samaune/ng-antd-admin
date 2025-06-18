@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, ViewChild, AfterViewInit, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, AfterViewInit, inject, viewChild } from '@angular/core';
 
 import { LazyServiceService } from '@app/pages/comp/lazy/lazy-service.service';
 import { PageHeaderType, PageHeaderComponent } from '@shared/components/page-header/page-header.component';
@@ -19,12 +19,12 @@ export class LazyBasicComponent implements AfterViewInit {
   pageHeaderInfo: Partial<PageHeaderType> = {
     title: '懒加载组件示例',
     breadcrumb: ['首页', '组件', '懒加载组件'],
-    desc: '懒加载组件,我永远喜欢周杰伦'
+    desc: '懒加载组件,我不再喜欢明星'
   };
-  @ViewChild(AdDirective, { static: true }) adHost!: AdDirective;
+  readonly adHost = viewChild.required(AdDirective);
   isStarted = false;
 
   ngAfterViewInit(): void {
-    this.lazyServiceService.adHost = this.adHost;
+    this.lazyServiceService.adHost = this.adHost();
   }
 }
