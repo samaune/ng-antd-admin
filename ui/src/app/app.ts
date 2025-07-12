@@ -7,8 +7,9 @@ import { PreloaderService } from '@core/services/common/preloader.service';
 import { LockScreenComponent } from '@shared/components/lock-screen/lock-screen.component';
 import { LockScreenStoreService } from '@store/common-store/lock-screen-store.service';
 import { SpinService } from '@store/common-store/spin.service';
-import { NzBackTopModule } from 'ng-zorro-antd/back-top';
+
 import { NzSafeAny } from 'ng-zorro-antd/core/types';
+import { NzFloatButtonTopComponent } from 'ng-zorro-antd/float-button';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
 
 @Component({
@@ -17,7 +18,7 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
     @if (lockedState()!.locked) {
       <app-lock-screen></app-lock-screen>
     }
-    <nz-back-top></nz-back-top>
+    <nz-float-button-top></nz-float-button-top>
     <div class="full-height">
       <router-outlet></router-outlet>
     </div>
@@ -30,9 +31,9 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LockScreenComponent, NzBackTopModule, RouterOutlet, NzSpinModule]
+  imports: [LockScreenComponent, RouterOutlet, NzSpinModule, NzFloatButtonTopComponent]
 })
-export class AppComponent implements OnInit, AfterViewInit {
+export class App implements OnInit, AfterViewInit {
   private preloader = inject(PreloaderService);
   private lockScreenStoreService = inject(LockScreenStoreService);
   private spinService = inject(SpinService);
